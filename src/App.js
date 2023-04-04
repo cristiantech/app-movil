@@ -1,5 +1,6 @@
-import React, {useState} from 'react'
-import shortid from 'shortid'
+import React, {useState, useEffect} from 'react'
+//import shortid from 'shortid'
+import { getCollection, addDocument, updateDocument, deleteDocument } from './lib/actions'
 
 function App() {
 
@@ -8,42 +9,81 @@ function App() {
   const [editMute, setEditMute] = useState(false)
   const [id, setId] = useState('')
 
-  
-  const addTask = (e) => {
+  // Cuando todo carga llamamos a la base de datos
+
+  useEffect( () => {
+    (async () => { 
+      const res = await getCollection('tasks')
+      if(res.statusResponse){
+        setTasks(res.data)
+      }
+    })()
+  }, {})
+
+//-----------------------//
+
+  const addTask = async (e) => {
      e.preventDefault()
      if(!task.length > 0){
        console.log('ok') // Agregar poput
      }
-     const newTask = {
-      id: shortid.generate(),
-      name: task
+
+     // Abrimos la conexion a la base de datos
+
+     const result = await addDocument('tasks', {name: task})
+     // Id es automatico
+     if (!result.statusResponse) {
+        console.log(result.error);
+        return
      }
+
+    // Sin base de datos
+    //  const newTask = {
+    //   id: shortid.generate(),
+    //   name: task
+    //  }
   
      // agreagando tareas al array de atreas
-     setTasks([...tasks, newTask])
-     console.log(tasks);
+     setTasks([...tasks, { id: result.data.id, name:task}])
+    
      setTask('')
   }
-  const saveTask = (e) => {
+
+  const saveTask = async (e) => {
      e.preventDefault()
      if(!task.length > 0){
        console.log('Error') // Agregar un error
      }
     
-     const editeTasks = tasks.map(tk => tk.id === id ? {id, name: task}: tk)
+     const res = await updateDocument('tasks', id, {name: task})
+
+     if (!res.statusResponse) {
+      console.log(res.error)
+     }
+
+    const editeTasks = tasks.map(tk => tk.id === id ? {id, name: task}: tk)
      // agreagando tareas al array de atreas
+    //  setTasks(editeTasks)
      setTasks(editeTasks)
      setEditMute(false)
      setTask('')
      setId('')
   }
 
-  const deletedTask = (id) => {
+  const deletedTask = async (id) => {
+
+    //Lamamdo ala BD
+    const res = await deleteDocument('tasks', id)
+    if (!res.statusResponse) {
+      console.log(res.error)
+      return
+    }
     const indexTask = tasks.findIndex(tk => tk.id === id);
     tasks.splice(indexTask, 1)
     const newStatck = [...tasks]
     setTasks(newStatck)
   }
+
   const editTask = (editTask) => {
     setTask(editTask.name)
     setEditMute(true)
